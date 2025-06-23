@@ -1,6 +1,11 @@
-<<<<<<< HEAD
 # chat-langchain-study
-=======
+
+从0开始运行这个项目：[chat-langchain项目启动攻略](https://www.yuque.com/goodnote/llm-dev/zwwg6hu8b5chwl1u#GB8I4)
+
+下面的内容是**官方项目的README**，只看上面的文档即可运行，不需要看下面的内容了。
+
+---
+
 # 🦜️🔗 Chat LangChain
 
 This repo is an implementation of a locally hosted chatbot specifically focused on question answering over the [LangChain documentation](https://python.langchain.com/).
