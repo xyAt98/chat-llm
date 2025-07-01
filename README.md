@@ -113,12 +113,12 @@ pip install weaviate-client==3.25.3
 >
 
 ### 运行代码
-这部分参考源仓库的可本地运行分支版本的内容就好了，**<font style="color:#DF2A3F;">不需要改任何代码，我已经改过了：</font>**
 
-1. <font style="color:rgb(31, 35, 40);">运行 </font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">python backend/ingest.py</font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);"> 执行 </font><font style="color:rgb(31, 35, 40);">文档数据提取到 Weaviate vectorstore 中（只需完成一次）。</font>
-2. <font style="color:rgb(31, 35, 40);">使用 </font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">make start</font>`<font style="color:rgb(31, 35, 40);"> 启动 Python 后端，后端运行在 8080 端口。</font>
-3. <font style="color:rgb(31, 35, 40);">通过运行 </font><font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">cd ./frontend 进入到前端目录，</font><font style="color:rgb(31, 35, 40);">然后安装前端依赖项，运行：</font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">yarn</font>`<font style="color:rgb(31, 35, 40);">。</font>
-4. <font style="color:rgb(31, 35, 40);">使用 </font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">yarn dev</font>`<font style="color:rgb(31, 35, 40);">运行前端，前端运行在 3000 端口。</font>
+这部分参考源仓库的可本地运行分支版本的内容就好了，不需要改任何代码，我已经改过了：
+1. 运行 `python backend/ingest.py` 执行 文档数据提取到 Weaviate vectorstore 中（只需完成一次）。
+2. 使用 `make start` 启动 Python 后端，后端运行在 8080 端口。
+3. 通过运行 `cd ./frontend` 进入到前端目录，然后安装前端依赖项，运行：`yarn`。
+4. 使用 `yarn dev` 运行前端，前端运行在 3000 端口。
 
 ## 运行并且更改官方仓库
 > 如果你不想运行我改后的代码，而是🔥运行并且更改官方仓库🔥：
@@ -185,27 +185,20 @@ pip install weaviate-client==3.25.3
 
 
 ### 运行后端代码
-1. <font style="color:rgb(31, 35, 40);">运行 </font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">python backend/ingest.py</font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);"> 执行 </font><font style="color:rgb(31, 35, 40);">文档数据提取到 Weaviate vectorstore 中（只需完成一次）。</font>
-2. <font style="color:rgb(31, 35, 40);">使用 </font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">make start</font>`<font style="color:rgb(31, 35, 40);"> 启动 Python 后端，后端运行在 8080 端口。</font>
+1. 运行 `python backend/ingest.py` 执行 文档数据提取到 Weaviate vectorstore 中（只需完成一次）。
+2. 使用 `make start` 启动 Python 后端，后端运行在 8080 端口。
 
 <font style="color:rgb(31, 35, 40);"></font>
 
 ### <font style="color:rgb(31, 35, 40);">修改前端代码</font>
 修改：chat-langchain/frontend/app/components/ChatMessageBubble.tsx文件 中第 5 81 108 行：
-
-1. 删除原代码的第5行：<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">import * as DOMPurify from "dompurify";</font>
-2. 更改原代码的第81行`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">__html: DOMPurify.sanitize(content.slice(prevIndex, match.index)),</font>`改为：`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">__html: content.slice(prevIndex, match.index),</font>`
-3. 更改原代码的第108行**<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">__html: DOMPurify.sanitize(content.slice(prevIndex)),</font>**改为：**<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">__html: content.slice(prevIndex),</font>**
+1. 删除原代码的第5行：`import * as DOMPurify from "dompurify"`;
+2. 更改原代码的第81行`__html: DOMPurify.sanitize(content.slice(prevIndex, match.index))`,改为：`__html: content.slice(prevIndex, match.index),`
+3. 更改原代码的第108行`__html: DOMPurify.sanitize(content.slice(prevIndex)),` 改为：`__html: content.slice(prevIndex),`
 
 ### 运行前端代码
-1. <font style="color:rgb(31, 35, 40);">通过运行 </font><font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">cd ./frontend 进入到前端目录，</font><font style="color:rgb(31, 35, 40);">然后安装前端依赖项，运行：</font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">yarn</font>`<font style="color:rgb(31, 35, 40);">。</font>
-2. <font style="color:rgb(31, 35, 40);">使用 </font>`<font style="color:rgb(31, 35, 40);background-color:rgba(129, 139, 152, 0.12);">yarn dev</font>`<font style="color:rgb(31, 35, 40);">运行前端，前端运行在 3000 端口。</font>
-
-
-
-
-
-
+1. 通过运行 `cd ./frontend` 进入到前端目录，然后安装前端依赖项，运行：`yarn`。
+2. 使用 `yarn dev` 运行前端，前端运行在 3000 端口。
 
 
 
