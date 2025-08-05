@@ -33,6 +33,7 @@ const MODEL_TYPES = [
   "google_gemini_pro",
   "fireworks_mixtral",
   "cohere_command",
+  "deepseek_chat",
 ];
 
 const defaultLlmValue =
@@ -49,10 +50,10 @@ export function ChatWindow(props: { conversationId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [llm, setLlm] = useState(
     searchParams.get("llm") ?? "openai_gpt_3_5_turbo",
-  );
+  ); // TODO： 不会是 url 参数里的吧
   const [llmIsLoading, setLlmIsLoading] = useState(true);
   useEffect(() => {
-    setLlm(searchParams.get("llm") ?? defaultLlmValue);
+    setLlm(searchParams.get("llm") ?? defaultLlmValue); // ?? defaultLlmValue 是随机值
     setLlmIsLoading(false);
   }, []);
 
@@ -131,57 +132,63 @@ export function ChatWindow(props: { conversationId: string }) {
           includeNames: [sourceStepName],
         },
       );
-      for await (const chunk of streamLog) {
-        streamedResponse = applyPatch(streamedResponse, chunk.ops, undefined, false).newDocument;
-        if (
-          Array.isArray(
-            streamedResponse?.logs?.[sourceStepName]?.final_output?.output,
-          )
-        ) {
-          sources = streamedResponse.logs[
-            sourceStepName
-          ].final_output.output.map((doc: Record<string, any>) => ({
-            url: doc.metadata.source,
-            title: doc.metadata.title,
-          }));
-        }
-        if (streamedResponse.id !== undefined) {
-          runId = streamedResponse.id;
-        }
-        if (Array.isArray(streamedResponse?.streamed_output)) {
-          accumulatedMessage = streamedResponse.streamed_output.join("");
-        }
-        const parsedResult = marked.parse(accumulatedMessage);
-
-        setMessages((prevMessages) => {
-          let newMessages = [...prevMessages];
+      try{
+        for await (const chunk of streamLog) {
+          streamedResponse = applyPatch(streamedResponse, chunk.ops, undefined, false).newDocument;
           if (
-            messageIndex === null ||
-            newMessages[messageIndex] === undefined
+            Array.isArray(
+              streamedResponse?.logs?.[sourceStepName]?.final_output?.output,
+            )
           ) {
-            messageIndex = newMessages.length;
-            newMessages.push({
-              id: Math.random().toString(),
-              content: parsedResult.trim(),
-              runId: runId,
-              sources: sources,
-              role: "assistant",
-            });
-          } else if (newMessages[messageIndex] !== undefined) {
-            newMessages[messageIndex].content = parsedResult.trim();
-            newMessages[messageIndex].runId = runId;
-            newMessages[messageIndex].sources = sources;
+            sources = streamedResponse.logs[
+              sourceStepName
+            ].final_output.output.map((doc: Record<string, any>) => ({
+              url: doc.metadata.source,
+              title: doc.metadata.title,
+            }));
           }
-          return newMessages;
-        });
+          if (streamedResponse.id !== undefined) {
+            runId = streamedResponse.id;
+          }
+          if (Array.isArray(streamedResponse?.streamed_output)) {
+            accumulatedMessage = streamedResponse.streamed_output.join("");
+          }
+          const parsedResult = marked.parse(accumulatedMessage);
+
+          setMessages((prevMessages) => {
+            let newMessages = [...prevMessages];
+            if (
+              messageIndex === null ||
+              newMessages[messageIndex] === undefined
+            ) {
+              messageIndex = newMessages.length;
+              newMessages.push({
+                id: Math.random().toString(),
+                content: parsedResult.trim(),
+                runId: runId,
+                sources: sources,
+                role: "assistant",
+              });
+            } else if (newMessages[messageIndex] !== undefined) {
+              newMessages[messageIndex].content = parsedResult.trim();
+              newMessages[messageIndex].runId = runId;
+              newMessages[messageIndex].sources = sources;
+            }
+            return newMessages;
+          });
+        }
+      } catch (e1) {
+        // streamLog 最后的返回是一个 None， 不符合 json 格式， 故而 chunk 在获取的时候报错了。
+        console.log("e1", e1);
       }
+
       setChatHistory((prevChatHistory) => [
         ...prevChatHistory,
         { human: messageValue, ai: accumulatedMessage },
       ]);
       setIsLoading(false);
     } catch (e) {
-      setMessages((prevMessages) => prevMessages.slice(0, -1));
+      setMessages((prevMessages) => prevMessages.slice(0, -1)); // 这句话啥意思， 调用吗？
       setIsLoading(false);
       setInput(messageValue);
       throw e;
@@ -260,7 +267,8 @@ export function ChatWindow(props: { conversationId: string }) {
                 <option value="fireworks_mixtral">
                   Mixtral (via Fireworks.ai)
                 </option>
-                <option value="cohere_command">Cohere</option>
+                {/* <option value="cohere_command">Cohere</option> */}
+                <option value="deepseek">DeepSeek</option>
               </Select>
             )}
           </div>

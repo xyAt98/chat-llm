@@ -13,14 +13,16 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.utils.html import PREFIXES_TO_IGNORE_REGEX, SUFFIXES_TO_IGNORE_REGEX
 from langchain_community.vectorstores import Weaviate
 from langchain_core.embeddings import Embeddings
-from langchain_openai import OpenAIEmbeddings
+# from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import ZhipuAIEmbeddings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def get_embeddings_model() -> Embeddings:
-    return OpenAIEmbeddings(model="text-embedding-3-small", chunk_size=200)
+    return ZhipuAIEmbeddings(mode="embedding-3", chunk_size=200)
+    # return OpenAIEmbeddings(model="text-embedding-3-small", chunk_size=200)
 
 
 def metadata_extractor(meta: dict, soup: BeautifulSoup) -> dict:
@@ -106,7 +108,7 @@ def ingest_docs():
         url=WEAVIATE_URL,
         auth_client_secret=weaviate.AuthApiKey(api_key=WEAVIATE_API_KEY),
     )
-    print("aaaaa:",client.is_ready())
+    print(f"================== {client.is_ready()} ======================")
     vectorstore = Weaviate(
         client=client,
         index_name=WEAVIATE_DOCS_INDEX_NAME,

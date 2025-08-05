@@ -109,6 +109,10 @@ async def get_trace(body: GetTraceBody):
     return await aget_trace_url(str(run_id))
 
 
+@app.get("/")
+def root():
+    return {"message": "Hello World"}
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ingest import get_embeddings_model
 from langchain_anthropic import ChatAnthropic
-from langchain_community.chat_models import ChatCohere
+# from langchain_community.chat_models import ChatCohere
 from langchain_community.vectorstores import Weaviate
 from langchain_core.documents import Document
 from langchain_core.language_models import LanguageModelLike
@@ -19,7 +19,8 @@ from langchain_core.prompts import (
     MessagesPlaceholder,
     PromptTemplate,
 )
-from langchain_core.pydantic_v1 import BaseModel
+# from langchain_core.pydantic_v1 import BaseModel
+from pydantic import BaseModel
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import (
     ConfigurableField,
@@ -34,6 +35,7 @@ from langchain_fireworks import ChatFireworks
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langsmith import Client
+from langchain_deepseek import ChatDeepSeek
 
 RESPONSE_TEMPLATE = """\
 You are an expert programmer and problem-solver, tasked with answering any question \
@@ -226,6 +228,7 @@ def create_chain(llm: LanguageModelLike, retriever: BaseRetriever) -> Runnable:
             fireworks_mixtral=default_response_synthesizer,
             google_gemini_pro=default_response_synthesizer,
             cohere_command=cohere_response_synthesizer,
+            deepseek=default_response_synthesizer,
         )
         | StrOutputParser()
     ).with_config(run_name="GenerateResponse")
@@ -235,6 +238,12 @@ def create_chain(llm: LanguageModelLike, retriever: BaseRetriever) -> Runnable:
         | response_synthesizer
     )
 
+deepseek = ChatDeepSeek(
+    model="deepseek-chat",
+    temperature=0,
+    max_tokens=4096,
+    api_key=os.environ.get("DEEPSEEK_API_KEY", "not_provided"),
+)
 
 gpt_3_5 = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0, streaming=True)
 claude_3_haiku = ChatAnthropic(
@@ -256,11 +265,11 @@ gemini_pro = ChatGoogleGenerativeAI(
     convert_system_message_to_human=True,
     google_api_key=os.environ.get("GOOGLE_API_KEY", "not_provided"),
 )
-cohere_command = ChatCohere(
-    model="command",
-    temperature=0,
-    cohere_api_key=os.environ.get("COHERE_API_KEY", "not_provided"),
-)
+# cohere_command = ChatCohere(
+#     model="command",
+#     temperature=0,
+#     cohere_api_key=os.environ.get("COHERE_API_KEY", "not_provided"),
+# )
 llm = gpt_3_5.configurable_alternatives(
     # This gives this field an id
     # When configuring the end runnable, we can then use this id to configure this field
@@ -269,10 +278,27 @@ llm = gpt_3_5.configurable_alternatives(
     anthropic_claude_3_haiku=claude_3_haiku,
     fireworks_mixtral=fireworks_mixtral,
     google_gemini_pro=gemini_pro,
-    cohere_command=cohere_command,
+    deepseek=deepseek,
+    # cohere_command=cohere_command,
 ).with_fallbacks(
-    [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro, cohere_command]
+    # [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro, cohere_command]
+    [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro,deepseek]
 )
+
+
+# llm = deepseek.configurable_alternatives(
+#     ConfigurableField(id="llm"),
+#     default_key="deepseek-chat",
+#     # gpt_3_5=gpt_3_5,
+#     # anthropic_claude_3_haiku=claude_3_haiku,
+#     # fireworks_mixtral=fireworks_mixtral,
+#     # gemini_pro=gemini_pro,
+#     # cohere_command=cohere_command,
+# ).with_fallbacks(
+#     # [deepseek, gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro, cohere_command]
+#     # [deepseek, gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro]
+#     [deepseek]
+# )
 
 retriever = get_retriever()
 answer_chain = create_chain(llm, retriever)
