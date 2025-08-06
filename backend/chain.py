@@ -3,7 +3,7 @@ from operator import itemgetter
 from typing import Dict, List, Optional, Sequence
 
 import weaviate
-from constants import WEAVIATE_DOCS_INDEX_NAME
+from constants import WEAVIATE_DOCS_INDEX_NAME, WEAVIATE_WANG_DEATH_BOOK
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ingest import get_embeddings_model
@@ -14,6 +14,7 @@ from langchain_core.documents import Document
 from langchain_core.language_models import LanguageModelLike
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
+# from langchain_core.caches import BaseCache 
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
@@ -135,7 +136,8 @@ def get_retriever() -> BaseRetriever:
     )
     weaviate_client = Weaviate(
         client=weaviate_client,
-        index_name=WEAVIATE_DOCS_INDEX_NAME,
+        # index_name=WEAVIATE_DOCS_INDEX_NAME,
+        index_name=WEAVIATE_WANG_DEATH_BOOK,
         text_key="text",
         embedding=get_embeddings_model(),
         by_text=False,
@@ -237,6 +239,7 @@ def create_chain(llm: LanguageModelLike, retriever: BaseRetriever) -> Runnable:
         | context
         | response_synthesizer
     )
+# ChatDeepSeek.model_rebuild()
 
 deepseek = ChatDeepSeek(
     model="deepseek-chat",
@@ -274,11 +277,11 @@ llm = gpt_3_5.configurable_alternatives(
     # This gives this field an id
     # When configuring the end runnable, we can then use this id to configure this field
     ConfigurableField(id="llm"),
+    deepseek=deepseek,
     default_key="openai_gpt_3_5_turbo",
     anthropic_claude_3_haiku=claude_3_haiku,
     fireworks_mixtral=fireworks_mixtral,
     google_gemini_pro=gemini_pro,
-    deepseek=deepseek,
     # cohere_command=cohere_command,
 ).with_fallbacks(
     # [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro, cohere_command]

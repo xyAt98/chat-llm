@@ -1,1 +1,2 @@
 WEAVIATE_DOCS_INDEX_NAME = "LangChain_Combined_Docs_OpenAI_text_embedding_3_small"
+WEAVIATE_WANG_DEATH_BOOK = "Wang_Death_Book_DeepSeek_text_embedding_3_small"
