@@ -11,6 +11,7 @@ from langchain.agents.openai_functions_agent.agent_token_buffer_memory import (
 )
 from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
 from langchain.chat_models import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.prompts import MessagesPlaceholder
 from langchain.schema.messages import SystemMessage
@@ -153,14 +154,15 @@ def return_results(client, llm):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset-name", default="Chat LangChain Complex Questions")
-    parser.add_argument("--model-provider", default="openai")
+    parser.add_argument("--model-provider", default="deepseek")
     parser.add_argument("--prompt-type", default="chat")
     args = parser.parse_args()
     client = Client()
     # Check dataset exists
     ds = client.read_dataset(dataset_name=args.dataset_name)
 
-    llm = ChatOpenAI(model="gpt-3.5-turbo-1106", streaming=True, temperature=0)
+    # llm = ChatOpenAI(model="gpt-3.5-turbo-1106", streaming=True, temperature=0)
+    llm = ChatDeepSeek(model="deepseek-chat", temperature=0, max_tokens=4096)
 
     eval_config = RunEvalConfig(evaluators=["qa"], prediction_key="output")
     results = run_on_dataset(

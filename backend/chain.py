@@ -210,26 +210,26 @@ def create_chain(llm: LanguageModelLike, retriever: BaseRetriever) -> Runnable:
     )
     default_response_synthesizer = prompt | llm
 
-    cohere_prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", COHERE_RESPONSE_TEMPLATE),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{question}"),
-        ]
-    )
+    # cohere_prompt = ChatPromptTemplate.from_messages(
+    #     [
+    #         ("system", COHERE_RESPONSE_TEMPLATE),
+    #         MessagesPlaceholder(variable_name="chat_history"),
+    #         ("human", "{question}"),
+    #     ]
+    # )
 
-    @chain
-    def cohere_response_synthesizer(input: dict) -> RunnableSequence:
-        return cohere_prompt | llm.bind(source_documents=input["docs"])
+    # @chain
+    # def cohere_response_synthesizer(input: dict) -> RunnableSequence:
+    #     return cohere_prompt | llm.bind(source_documents=input["docs"])
 
     response_synthesizer = (
         default_response_synthesizer.configurable_alternatives(
             ConfigurableField("llm"),
             default_key="openai_gpt_3_5_turbo",
-            anthropic_claude_3_haiku=default_response_synthesizer,
-            fireworks_mixtral=default_response_synthesizer,
-            google_gemini_pro=default_response_synthesizer,
-            cohere_command=cohere_response_synthesizer,
+            # anthropic_claude_3_haiku=default_response_synthesizer,
+            # fireworks_mixtral=default_response_synthesizer,
+            # google_gemini_pro=default_response_synthesizer,
+            # cohere_command=cohere_response_synthesizer,
             deepseek=default_response_synthesizer,
         )
         | StrOutputParser()
@@ -245,29 +245,28 @@ deepseek = ChatDeepSeek(
     model="deepseek-chat",
     temperature=0,
     max_tokens=4096,
-    api_key=os.environ.get("DEEPSEEK_API_KEY", "not_provided"),
 )
 
 gpt_3_5 = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0, streaming=True)
-claude_3_haiku = ChatAnthropic(
-    model="claude-3-haiku-20240307",
-    temperature=0,
-    max_tokens=4096,
-    anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", "not_provided"),
-)
-fireworks_mixtral = ChatFireworks(
-    model="accounts/fireworks/models/mixtral-8x7b-instruct",
-    temperature=0,
-    max_tokens=16384,
-    fireworks_api_key=os.environ.get("FIREWORKS_API_KEY", "not_provided"),
-)
-gemini_pro = ChatGoogleGenerativeAI(
-    model="gemini-pro",
-    temperature=0,
-    max_tokens=16384,
-    convert_system_message_to_human=True,
-    google_api_key=os.environ.get("GOOGLE_API_KEY", "not_provided"),
-)
+# claude_3_haiku = ChatAnthropic(
+#     model="claude-3-haiku-20240307",
+#     temperature=0,
+#     max_tokens=4096,
+#     anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY", "not_provided"),
+# )
+# fireworks_mixtral = ChatFireworks(
+#     model="accounts/fireworks/models/mixtral-8x7b-instruct",
+#     temperature=0,
+#     max_tokens=16384,
+#     fireworks_api_key=os.environ.get("FIREWORKS_API_KEY", "not_provided"),
+# )
+# gemini_pro = ChatGoogleGenerativeAI(
+#     model="gemini-pro",
+#     temperature=0,
+#     max_tokens=16384,
+#     convert_system_message_to_human=True,
+#     google_api_key=os.environ.get("GOOGLE_API_KEY", "not_provided"),
+# )
 # cohere_command = ChatCohere(
 #     model="command",
 #     temperature=0,
@@ -279,29 +278,16 @@ llm = gpt_3_5.configurable_alternatives(
     ConfigurableField(id="llm"),
     deepseek=deepseek,
     default_key="openai_gpt_3_5_turbo",
-    anthropic_claude_3_haiku=claude_3_haiku,
-    fireworks_mixtral=fireworks_mixtral,
-    google_gemini_pro=gemini_pro,
+    # anthropic_claude_3_haiku=claude_3_haiku,
+    # fireworks_mixtral=fireworks_mixtral,
+    # google_gemini_pro=gemini_pro,
     # cohere_command=cohere_command,
 ).with_fallbacks(
     # [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro, cohere_command]
-    [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro,deepseek]
+    # [gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro,deepseek]
+    [deepseek, gpt_3_5]
 )
 
-
-# llm = deepseek.configurable_alternatives(
-#     ConfigurableField(id="llm"),
-#     default_key="deepseek-chat",
-#     # gpt_3_5=gpt_3_5,
-#     # anthropic_claude_3_haiku=claude_3_haiku,
-#     # fireworks_mixtral=fireworks_mixtral,
-#     # gemini_pro=gemini_pro,
-#     # cohere_command=cohere_command,
-# ).with_fallbacks(
-#     # [deepseek, gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro, cohere_command]
-#     # [deepseek, gpt_3_5, claude_3_haiku, fireworks_mixtral, gemini_pro]
-#     [deepseek]
-# )
 
 retriever = get_retriever()
 answer_chain = create_chain(llm, retriever)
