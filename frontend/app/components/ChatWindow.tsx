@@ -215,7 +215,12 @@ export function ChatWindow(props: { conversationId: string }) {
   };
 
   return (
-    <div className="flex flex-col items-center p-8 rounded grow max-h-full">
+    <div className="flex flex-col items-center p-8 rounded grow max-h-full ">
+      <div className="w-full border-b border-gray-700 pb-4 mb-4">
+        <Heading fontSize="xl" fontWeight="medium" color="white" textAlign="center">
+          Chat Assistant
+        </Heading>
+      </div>
       <Flex
         direction={"column"}
         alignItems={"center"}
