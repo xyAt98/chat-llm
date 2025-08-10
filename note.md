@@ -29,6 +29,10 @@ supabase postgres 的云数据库（目前没看到用在哪里了）
 
 # 前端
 
+/frontend/app/page.tsx#L13  
+`<ChatWindow conversationId={uuidv4()}></ChatWindow>`
+由 uuidv4() 生成 conversationId , 传给后端并在对话期间一直使用这个 id 进行对话。
+每次页面刷新或重新加载时，都会生成一个新的 conversationId
 
 
 # debug
