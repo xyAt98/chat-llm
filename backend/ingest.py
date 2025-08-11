@@ -5,20 +5,17 @@ import re
 from pathlib import Path
 
 from regex import B
+from vector_store_manage import VectorStoreManager
 from parser import langchain_docs_extractor
 from beir import util
 
 
-import weaviate
 from bs4 import BeautifulSoup, SoupStrainer
 from constants import WEAVIATE_DOCS_INDEX_NAME, WEAVIATE_WANG_DEATH_BOOK, WEAVIATE_SCIFACT_INDEX_NAME
 from langchain.indexes import SQLRecordManager, index
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.utils.html import PREFIXES_TO_IGNORE_REGEX, SUFFIXES_TO_IGNORE_REGEX
-from langchain_community.vectorstores import Weaviate
-from langchain_core.embeddings import Embeddings
 # from langchain_openai import OpenAIEmbeddings
-from langchain_community.embeddings import ZhipuAIEmbeddings
 from langchain.document_loaders import (
     RecursiveUrlLoader,
     SitemapLoader,
@@ -30,10 +27,7 @@ root_dir = Path(__file__).parent.parent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 BATCH_SIZE = 64
-
-def get_embeddings_model() -> Embeddings:
-    return ZhipuAIEmbeddings(model="embedding-3", dimensions=1024)
-    # return OpenAIEmbeddings(model="text-embedding-3-small", chunk_size=200)
+vector_store_manager = VectorStoreManager()
 
 
 def metadata_extractor(meta: dict, soup: BeautifulSoup) -> dict:
@@ -224,27 +218,14 @@ def load_json_docs(path: str):
     return docs
 
 def ingest_docs(index_name: str):
-    # 这个只能用langchain的loader加载并向量化保存到 weaviate 中， 封装得太多了。
-    WEAVIATE_URL = os.environ["WEAVIATE_URL"]
-    WEAVIATE_API_KEY = os.environ["WEAVIATE_API_KEY"]
+    # 使用统一的连接管理
     RECORD_MANAGER_DB_URL = os.environ["RECORD_MANAGER_DB_URL"]
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=200)
-    embedding = get_embeddings_model()
-
-    client = weaviate.Client(
-        url=WEAVIATE_URL,
-        auth_client_secret=weaviate.AuthApiKey(api_key=WEAVIATE_API_KEY),
-    )
-    print(f"================== {client.is_ready()} ======================")
-    vectorstore = Weaviate(
-        client=client,
-        index_name=index_name,
-        text_key="text",
-        embedding=embedding,
-        by_text=False,
-        attributes=["source", "title"],
-    )
+    
+    # 使用单例连接创建vector store
+    vectorstore = vector_store_manager.get_vector_store(index_name)
+    # vectorstore = get_vectorstore(index_name)
 
     record_manager = SQLRecordManager(
         # f"weaviate/{WEAVIATE_DOCS_INDEX_NAME}", db_url=RECORD_MANAGER_DB_URL
@@ -298,7 +279,7 @@ def ingest_docs(index_name: str):
     )
 
     logger.info(f"Indexing stats: {indexing_stats}")
-    num_vecs = client.query.aggregate(index_name).with_meta_count().do()
+    num_vecs = vectorstore.client.query.aggregate(index_name).with_meta_count().do()
     logger.info(
         f"LangChain now has this many vectors: {num_vecs}",
     )

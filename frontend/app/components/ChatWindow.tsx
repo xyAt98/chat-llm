@@ -39,8 +39,9 @@ const MODEL_TYPES = [
 const defaultLlmValue =
   MODEL_TYPES[Math.floor(Math.random() * MODEL_TYPES.length)];
 
-export function ChatWindow(props: { conversationId: string }) {
+export function ChatWindow(props: { conversationId: string; disabled?: boolean }) {
   const conversationId = props.conversationId;
+  const disabled = props.disabled || false;
 
   const searchParams = useSearchParams();
 
@@ -304,11 +305,17 @@ export function ChatWindow(props: { conversationId: string }) {
           value={input}
           maxRows={5}
           marginRight={"56px"}
-          placeholder="What does RunnablePassthrough.assign() do?"
-          textColor={"white"}
-          borderColor={"rgb(58, 58, 61)"}
+          placeholder={disabled ? "请先添加知识来源" : "What does RunnablePassthrough.assign() do?"}
+          textColor={disabled ? "gray.500" : "white"}
+          borderColor={disabled ? "gray.600" : "rgb(58, 58, 61)"}
+          backgroundColor={disabled ? "gray.800" : "transparent"}
+          isDisabled={disabled}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
+            if (disabled) {
+              e.preventDefault();
+              return;
+            }
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               sendMessage();
@@ -320,14 +327,17 @@ export function ChatWindow(props: { conversationId: string }) {
         />
         <InputRightElement h="full">
           <IconButton
-            colorScheme="blue"
+            colorScheme={disabled ? "gray" : "blue"}
             rounded={"full"}
             aria-label="Send"
             icon={isLoading ? <Spinner /> : <ArrowUpIcon />}
             type="submit"
+            isDisabled={disabled || isLoading}
             onClick={(e) => {
               e.preventDefault();
-              sendMessage();
+              if (!disabled) {
+                sendMessage();
+              }
             }}
           />
         </InputRightElement>
