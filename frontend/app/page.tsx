@@ -14,9 +14,12 @@ export default function Home() {
   const [shouldOpenModal, setShouldOpenModal] = useState(false);
 
   const hasValidPathParameter = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const vectorIndex = urlParams.get('vector_index');
-    return vectorIndex && vectorIndex.length > 0;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const vectorIndex = urlParams.get('vector_index');
+      return vectorIndex && vectorIndex.length > 0;
+    }
+    return false;
   };
 
   useEffect(() => {
@@ -31,7 +34,7 @@ export default function Home() {
           <KnowledgeWindow conversationId={uuidv4()} shouldOpenModal={shouldOpenModal}></KnowledgeWindow>
         </div>
         <div className="w-4/5 h-full rounded-lg m-5" style={{ background: "rgb(36, 36, 37)"}}>
-          <ChatWindow conversationId={uuidv4()} disabled={!hasValidPathParameter()}></ChatWindow>
+          <ChatWindow conversationId={uuidv4()} disabled={shouldOpenModal}></ChatWindow>
         </div>
       </div>
     </ChakraProvider>
