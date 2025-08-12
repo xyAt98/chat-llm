@@ -51,6 +51,7 @@ class VectorStoreManager:
 
 
     def get_vector_store(self, index_name: str):
+        # 当 index_name 不存在时，创建一个新的 vector store
         with self._lock:
             if self._vector_stores.get(index_name) is None:
                 self._vector_stores[index_name] = Weaviate(

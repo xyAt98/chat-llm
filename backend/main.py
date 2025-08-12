@@ -18,6 +18,7 @@ from constants import WEAVIATE_DOCS_INDEX_NAME
 from langserve import add_routes
 from langsmith import Client
 from pydantic import BaseModel
+from dynamic_chain import dynamic_chain
 
 # 响应码常量定义
 class ResponseCode:
@@ -46,7 +47,8 @@ app.add_middleware(
 
 add_routes(
     app,
-    answer_chain,
+    # answer_chain,
+    dynamic_chain,
     path="/chat",
     input_type=ChatRequest,
     config_keys=["metadata", "configurable", "tags"],
@@ -141,6 +143,8 @@ class FetchUrlBody(BaseModel):
 
 @app.post("/knowledge/url")
 async def get_knowledge_from_url(body: FetchUrlBody):
+    from chain import get_answer_chain
+
     url = body.url
     """处理知识库中数据源(形式为URL)的上传"""
     # 1. 验证URL是否合格
@@ -153,18 +157,22 @@ async def get_knowledge_from_url(body: FetchUrlBody):
         if not docs:
             return {"error": "Failed to load content from URL", "code": ResponseCode.BAD_REQUEST}
         
-        # 3. 生成或获取index name
-        # index_name = generate_index_name(url)
-        index_name = WEAVIATE_DOCS_INDEX_NAME
+        # 3. 生成标题
+        title = extract_title_from_docs(docs)
+
+        # 4. 根据title生成index name
+        index_name = generate_index_name(url, title)
         
-        # 4. 嵌入内容并存入数据库
+        # 5. 嵌入内容并存入数据库
         embed_and_store_content(docs, index_name)
         
-        # 5. 生成示例问题
+        # 6. 生成示例问题
         example_questions = generate_example_questions(docs)
 
-        # 6. 返回标题
-        title = extract_title_from_docs(docs)
+        # 7. 根据 index name 构建 answer chain
+        chain = get_answer_chain(index_name)
+        dynamic_chain.set_chain(chain)
+
         return {"title": title, "index_name": index_name, "code": ResponseCode.SUCCESS, "example_questions": example_questions}
         
     except Exception as e:
@@ -196,28 +204,26 @@ def load_url_content(url: str):
         return None
 
 
-def generate_index_name(url:str) -> str:
-    """根据URL生成合适的index name"""
-    # 伪代码实现
-    # 从URL中提取域名和路径信息
-    from urllib.parse import urlparse
+def generate_index_name(url: str, title: str) -> str:
+    """根据title生成index name，在title后加index_name并符合命名规范"""
     import re
-    parsed = urlparse(url)
-    domain = parsed.netloc.replace('.', '_')
-    path = parsed.path.replace('/', '_').strip('_')
+    from urllib.parse import urlparse
     
-    # 生成简洁的index name
-    if path:
-        index_name = f"{domain}_{path}"
-    else:
-        index_name = domain
+    # 清理title，转换为适合作为index name的格式
+    clean_title = title.lower()
+    clean_title = re.sub(r'[^a-z0-9\s]', '', clean_title)  # 移除非字母数字字符
+    clean_title = re.sub(r'\s+', '_', clean_title)  # 空格替换为下划线
+    clean_title = clean_title.strip('_')
+    
+    # 生成index name
+    index_name = f"{clean_title}_index_name"
     
     # 确保index name符合Weaviate命名规范
-    index_name = index_name.lower()
-    index_name = re.sub(r'[^a-z0-9_]', '_', index_name)
-    index_name = re.sub(r'_+', '_', index_name)
-    index_name = index_name.strip('_')
+    index_name = re.sub(r'[^a-z0-9_]', '_', index_name)  # 再次确保只包含允许的字符
+    index_name = re.sub(r'_+', '_', index_name)  # 合并多个下划线
+    index_name = index_name.strip('_')  # 移除首尾下划线
     
+    # 限制长度
     return index_name[:50]  # 限制长度
 
 
@@ -312,18 +318,71 @@ def generate_example_questions(docs):
         return []
 
 def extract_title_from_docs(docs) -> str:
-    """从文档中提取标题"""
-    if docs and len(docs) > 0:
-        # 尝试从metadata中获取title
-        title = docs[0].metadata.get("title", "")
-        if title:
-            return title
+    # """使用大模型基于文档内容生成合适的标题"""
+    # if not docs or len(docs) == 0:
+    #     return "Untitled"
+    
+    # # 如果内容太长，截取前3000个字符作为上下文
+    # content = docs[0].page_content if docs else ""
+    # if len(content) > 3000:
+    #     content = content[:3000] + "..."
+    
+    # prompt_template = """
+    #     基于以下内容，生成一个简洁、准确、有意义的标题。
         
-        # 如果没有title，尝试从URL中提取
-        if docs[0].metadata.get("source"):
-            from urllib.parse import urlparse
-            parsed = urlparse(docs[0].metadata["source"])
-            return parsed.netloc
+    #     要求：
+    #     1. 标题要能准确反映内容的主题
+    #     2. 标题要简洁明了，最好在10个字以内
+    #     3. 避免使用过于笼统的词汇
+    #     4. 如果内容来自特定领域，标题应该体现该领域特征
+        
+    #     内容：
+    #     {content}
+        
+    #     请生成一个合适的标题：
+    #     """
+    
+    # llm = ChatDeepSeek(model="deepseek-chat", temperature=0.3)
+    # from langchain_core.prompts import PromptTemplate
+    # from langchain_core.output_parsers import StrOutputParser
+    
+    # prompt = PromptTemplate.from_template(prompt_template)
+    # chain = prompt | llm | StrOutputParser()
+    
+    # try:
+    #     generated_title = chain.invoke({'content': content}).strip()
+        
+    #     # 清理生成的标题，去除多余的引号和换行符
+    #     generated_title = generated_title.replace('"', '').replace('\n', '').strip()
+        
+    #     # 如果生成的标题为空或太短，使用备用方案
+    #     if len(generated_title) < 2:
+    #         # 尝试从metadata中获取title
+    #         title = docs[0].metadata.get("title", "")
+    #         if title:
+    #             return title
+            
+    #         # 如果没有title，尝试从URL中提取
+    #         if docs[0].metadata.get("source"):
+    #             from urllib.parse import urlparse
+    #             parsed = urlparse(docs[0].metadata["source"])
+    #             return parsed.netloc
+            
+    #         return "Untitled"
+        
+    #     return generated_title
+        
+    # except Exception as e:
+    #     print(f"Error generating title with LLM: {e}")
+    # 备用方案：使用原有的简单提取方法
+    title = docs[0].metadata.get("title", "")
+    if title:
+        return title
+    
+    if docs[0].metadata.get("source"):
+        from urllib.parse import urlparse
+        parsed = urlparse(docs[0].metadata["source"])
+        return parsed.netloc
     
     return "Untitled"
 
