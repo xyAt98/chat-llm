@@ -1,0 +1,15 @@
+diff --git a/node_modules/@langchain/core/dist/runnables/remote.js b/node_modules/@langchain/core/dist/runnables/remote.js
+index ae1d5c6..a2f8bd1 100644
+--- a/node_modules/@langchain/core/dist/runnables/remote.js
++++ b/node_modules/@langchain/core/dist/runnables/remote.js
+@@ -385,6 +385,10 @@ export class RemoteRunnable extends Runnable {
+             }
+             const runnableStream = convertEventStreamToIterableReadableDataStream(body);
+             for await (const log of runnableStream) {
++                 // 新增：跳过非 JSON 帧
++                if (typeof log !== "string" || !log.trim().startsWith("{")) {
++                    continue;
++                }
+                 const chunk = revive(JSON.parse(log));
+                 const logPatch = new RunLogPatch({ ops: chunk.ops });
+                 yield logPatch;
