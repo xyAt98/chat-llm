@@ -12,11 +12,10 @@ class DynamicChain(Runnable):
     def set_chain(self, chain):
         self.chain = chain
 
-    def invoke(self, input):
+    def invoke(self, input, config=None):
         if self.chain is None:
             raise HTTPException(status_code=500, detail="Chain not set")
-        return self.chain.invoke(input)
+        return self.chain.invoke(input, config)
     
-    # TODO: 这里我是不是得把 所有的方法都重新定义一下？
-    
+            
 dynamic_chain = DynamicChain()

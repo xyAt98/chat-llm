@@ -224,7 +224,7 @@ def ingest_docs(index_name: str):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=200)
     
     # 使用单例连接创建vector store
-    vectorstore = vector_store_manager.get_vector_store(index_name)
+    vectorstore = vector_store_manager.get_vector_store_client(index_name)
     # vectorstore = get_vectorstore(index_name)
 
     record_manager = SQLRecordManager(

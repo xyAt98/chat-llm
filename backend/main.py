@@ -1,5 +1,5 @@
 """Main entrypoint for the app."""
-from ast import Dict, Str
+from ast import Dict
 import asyncio
 from operator import index
 from tokenize import String
@@ -11,7 +11,7 @@ import langsmith
 from regex import P
 from sklearn.calibration import StrOptions
 from vector_store_manage import VectorStoreManager
-from chain import ChatRequest
+from chain import ChatRequest, get_answer_chain
 # from chain import answer_chain
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +46,8 @@ app.add_middleware(
 # def get_chain_with_index(request: ChatRequest):
 #     """Get chain with specified index name."""
 #     return get_answer_chain(request.index_name or "wang_death_book")
+chain = get_answer_chain("Evaluate_your_first_llm_app_ragas_index_name")
+dynamic_chain.set_chain(chain)
 
 add_routes(
     app,
@@ -260,7 +262,7 @@ def embed_and_store_content(docs, index_name: str):
             doc.metadata["title"] = ""
     
     # 使用单例连接创建vector store
-    vectorstore = vector_store_manager.get_vector_store(index_name)
+    vectorstore = vector_store_manager.get_vector_store_client(index_name)
     # vectorstore = get_vectorstore(index_name)
     
     # 使用record manager进行去重

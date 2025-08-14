@@ -133,7 +133,7 @@ class ChatRequest(BaseModel):
 
 
 def get_retriever(index_name: str = WEAVIATE_DOCS_INDEX_NAME) -> BaseRetriever:
-    vector_store = vector_store_manager.get_vector_store(index_name)
+    vector_store = vector_store_manager.get_vector_store_client(index_name)
     return vector_store.as_retriever(search_kwargs=dict(k=6))
 
 
