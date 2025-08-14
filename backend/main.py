@@ -51,8 +51,6 @@ add_routes(
     app,
     # answer_chain,
     dynamic_chain,
-    # answer_chain,
-    dynamic_chain,
     path="/chat",
     input_type=ChatRequest,
     config_keys=["metadata", "configurable", "tags"],
@@ -208,9 +206,6 @@ def load_url_content(url: str):
         return None
 
 
-def generate_index_name(url: str, title: str) -> str:
-    """根据title生成index name，在title后加index_name并符合命名规范"""
-    import re
 def generate_index_name(url: str, title: str) -> str:
     """根据title生成index name，在title后加index_name并符合命名规范"""
     import re
