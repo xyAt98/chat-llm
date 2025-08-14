@@ -112,6 +112,8 @@ venv.bak/
 .vscode/
 datasets/
 
+evaluate_test.ipynb
+
 # Spyder project settings
 .spyderproject
 .spyproject

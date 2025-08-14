@@ -11,13 +11,15 @@ import langsmith
 from regex import P
 from sklearn.calibration import StrOptions
 from vector_store_manage import VectorStoreManager
-from chain import ChatRequest, answer_chain
+from chain import ChatRequest
+# from chain import answer_chain
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from constants import WEAVIATE_DOCS_INDEX_NAME
 from langserve import add_routes
 from langsmith import Client
 from pydantic import BaseModel
+from dynamic_chain import dynamic_chain
 from dynamic_chain import dynamic_chain
 
 # 响应码常量定义
@@ -47,6 +49,8 @@ app.add_middleware(
 
 add_routes(
     app,
+    # answer_chain,
+    dynamic_chain,
     # answer_chain,
     dynamic_chain,
     path="/chat",
@@ -145,14 +149,14 @@ class FetchUrlBody(BaseModel):
 async def get_knowledge_from_url(body: FetchUrlBody):
     from chain import get_answer_chain
 
+    from chain import get_answer_chain
+
     url = body.url
     """处理知识库中数据源(形式为URL)的上传"""
-    # 1. 验证URL是否合格
     if not is_valid_url(url):
         return {"error": "Invalid URL format", "code": ResponseCode.BAD_REQUEST}
     
     try:
-        # 2. 加载URL内容
         docs = load_url_content(url)
         if not docs:
             return {"error": "Failed to load content from URL", "code": ResponseCode.BAD_REQUEST}
@@ -207,7 +211,16 @@ def load_url_content(url: str):
 def generate_index_name(url: str, title: str) -> str:
     """根据title生成index name，在title后加index_name并符合命名规范"""
     import re
+def generate_index_name(url: str, title: str) -> str:
+    """根据title生成index name，在title后加index_name并符合命名规范"""
+    import re
     from urllib.parse import urlparse
+    
+    # 清理title，转换为适合作为index name的格式
+    clean_title = title.lower()
+    clean_title = re.sub(r'[^a-z0-9\s]', '', clean_title)  # 移除非字母数字字符
+    clean_title = re.sub(r'\s+', '_', clean_title)  # 空格替换为下划线
+    clean_title = clean_title.strip('_')
     
     # 清理title，转换为适合作为index name的格式
     clean_title = title.lower()
@@ -217,12 +230,18 @@ def generate_index_name(url: str, title: str) -> str:
     
     # 生成index name
     index_name = f"{clean_title}_index_name"
+    # 生成index name
+    index_name = f"{clean_title}_index_name"
     
     # 确保index name符合Weaviate命名规范
     index_name = re.sub(r'[^a-z0-9_]', '_', index_name)  # 再次确保只包含允许的字符
     index_name = re.sub(r'_+', '_', index_name)  # 合并多个下划线
     index_name = index_name.strip('_')  # 移除首尾下划线
+    index_name = re.sub(r'[^a-z0-9_]', '_', index_name)  # 再次确保只包含允许的字符
+    index_name = re.sub(r'_+', '_', index_name)  # 合并多个下划线
+    index_name = index_name.strip('_')  # 移除首尾下划线
     
+    # 限制长度
     # 限制长度
     return index_name[:50]  # 限制长度
 
@@ -255,7 +274,7 @@ def embed_and_store_content(docs, index_name: str):
         f"weaviate/{index_name}",
         db_url=os.environ["RECORD_MANAGER_DB_URL"],
     )
-    record_manager.create_schema()
+    record_manager.create_schema() # 这是在干嘛？ 每次都得这样吗？
     
     # 索引文档
     indexing_stats = index(

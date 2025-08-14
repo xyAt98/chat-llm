@@ -1,3 +1,4 @@
+https://docs.ragas.io/en/stable/getstarted/evals
 
 # 组件
 weaviate 向量数据库好像是
@@ -21,7 +22,7 @@ supabase postgres 的云数据库（目前没看到用在哪里了）
 
 3. 连接上 weaviate 云向量数据库客户端
 
-4. 在内存中构建一个 向量数据库 ， WEAVIATE_DOCS_INDEX_NAME 这是啥？？？
+4. 在内存中构建一个 向量数据库 ， WEAVIATE_DOCS_INDEX_NAME 这是啥？？？ 索引的名字（有点类似于根据索引的名字区隔开不同的知识库）
 
 5. record_manager ？ postgres 的数据库？ 用处是啥？
 
@@ -58,3 +59,20 @@ supabase postgres 的云数据库（目前没看到用在哪里了）
 
 
 
+
+# 可深入的点
+1. 在整个应用程序的生命周期中初始化一次 向量数据库的连接  client（用的连接方法是 weaviate 提供的包）
+2. 同时维护多个知识库连接， 用的是 langchain 实现的 Weaviate 高级抽象 
+
+ 1. 单例连接管理 (database.py):
+    - WeaviateConnection 类确保整个应用只有一个数据库连接
+    - get_vectorstore() 工厂函数支持多索引创建
+  2. 动态索引支持 (chain.py):
+    - ChatRequest 添加 index_name 参数，默认为 "wang_death_book"
+    - get_retriever() 和 get_answer_chain() 支持动态索引选择
+  3. 统一连接管理 (main.py, ingest.py):
+    - 所有地方都使用单例连接，避免重复创建
+    - 支持多知识库的灵活查询和存储
+  
+3. 动态 answer_chain 是怎么实现的？
+在 app 生成的时候，app_routes 里传入的 Runnable 是一个继承了 Runnable 的一个对象， 里面有一个属性是 chain， 有一个 set_chain 的方法。初始 chain 为 None， 直到要使用 chain 的时候再构建 new_chain 并将 new_chain 赋值给 chain

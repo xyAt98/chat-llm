@@ -286,5 +286,5 @@ def get_answer_chain(index_name: str = WEAVIATE_DOCS_INDEX_NAME) -> Runnable:
     return create_chain(llm, retriever)
 
 # Default chain for backward compatibility
-retriever = get_retriever()
-answer_chain = get_answer_chain()
+# retriever = get_retriever()
+# answer_chain = get_answer_chain()
