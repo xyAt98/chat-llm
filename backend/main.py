@@ -407,6 +407,10 @@ def extract_title_from_docs(docs) -> str:
 def root():
     return {"message": "Hello World"}
 
+@app.get("/check_vector_store/{index_name}")
+def check_vector_store_is_avaliable(index_name: str):
+    return vector_store_manager.check_collections_exist(index_name)
+
 if __name__ == "__main__":
     import uvicorn
 

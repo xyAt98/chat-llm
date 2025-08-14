@@ -49,19 +49,26 @@ class VectorStoreManager:
     def get_client(self):
         return self._client
 
-
+    def check_collections_exist(self, index_name: str):
+        if self._client:
+            return self._client.schema.exists(index_name)
+        return False
+    
     def get_vector_store_client(self, index_name: str):
         # 当 index_name 不存在时，创建一个新的 vector store
         with self._lock:
             if self._vector_stores.get(index_name) is None:
-                self._vector_stores[index_name] = Weaviate(
-                    client=self._client,
-                    index_name=index_name,
-                    text_key="text", # TODO: 这是啥？
-                    embedding=get_embeddings_model(), #TODO： 嵌入模型也是一个资源型变量吗？ 需要单例化吗？
-                    by_text=False,
-                    attributes=["source", "title"],
-                )
+                if self.check_collections_exist(index_name) is True:
+                    self._vector_stores[index_name] = Weaviate(
+                        client=self._client,
+                        index_name=index_name,
+                        text_key="text", # TODO: 这是啥？
+                        embedding=get_embeddings_model(), #TODO： 嵌入模型也是一个资源型变量吗？ 需要单例化吗？
+                        by_text=False,
+                        attributes=["source", "title"],
+                    )
+                else:
+                    raise Exception(f"Collection {index_name} does not exist")
 
             return self._vector_stores[index_name]
 
