@@ -103,12 +103,10 @@ def load_api_docs():
     ).load()
     return api_docs
 
-def load_docs_from_book(path: str) -> dict:
-    base = Path(path)
-
+def load_docs_from_book(path: str):
     # 文本/Markdown 文档
     book_docs = TextLoader(
-        file_path='/home/yani/Downloads/王氏之死.txt',
+        file_path=path,
         encoding='utf-8').load()
     return book_docs
 
@@ -248,16 +246,16 @@ def ingest_docs(index_name: str):
     # )
     # docs_transformed = [doc for doc in docs_transformed if len(doc.page_content) > 10]
 
-    # book_docs = load_docs_from_book('/home/yani/Downloads/王氏之死.txt')
-    # logger.info(f"Loaded {len(book_docs)} docs from book")
-    # book_docs_transformed = text_splitter.split_documents(book_docs)
+    book_docs = load_docs_from_book('/home/yani/Downloads/叫魂.txt')
+    logger.info(f"Loaded {len(book_docs)} docs from book")
+    book_docs_transformed = text_splitter.split_documents(book_docs)
+    docs_transformed = [doc for doc in book_docs_transformed if len(doc.page_content) > 10]
 
-    # docs_transformed = [doc for doc in book_docs_transformed if len(doc.page_content) > 10]
-    path = "/home/yani/projects/chat-llm/datasets/scifact/corpus.jsonl"
-    beir_docs = load_json_docs(path)
-    logger.info(f"Loaded {len(beir_docs)} docs from beir")
-    docs_transformed = text_splitter.split_documents(beir_docs)
-    docs_transformed = [doc for doc in docs_transformed if len(doc.page_content) > 10]
+    # path = "/home/yani/projects/chat-llm/datasets/scifact/corpus.jsonl"
+    # beir_docs = load_json_docs(path)
+    # logger.info(f"Loaded {len(beir_docs)} docs from beir")
+    # docs_transformed = text_splitter.split_documents(beir_docs)
+    # docs_transformed = [doc for doc in docs_transformed if len(doc.page_content) > 10]
 
     # We try to return 'source' and 'title' metadata when querying vector store and
     # Weaviate will error at query time if one of the attributes is missing from a
@@ -273,16 +271,17 @@ def ingest_docs(index_name: str):
         record_manager,
         vectorstore,
         batch_size=BATCH_SIZE,
-        cleanup="full",
+        cleanup="scoped_full",
         source_id_key="source",
-        force_update=(os.environ.get("FORCE_UPDATE") or "false").lower() == "true",
+        force_update=True,
     )
 
     logger.info(f"Indexing stats: {indexing_stats}")
-    num_vecs = vectorstore.client.query.aggregate(index_name).with_meta_count().do()
-    logger.info(
-        f"LangChain now has this many vectors: {num_vecs}",
-    )
+    if vector_store_manager and vector_store_manager._client:
+        num_vecs = vector_store_manager._client.query.aggregate(index_name).with_meta_count().do()
+        logger.info(
+            f"LangChain now has this many vectors: {num_vecs}",
+        )
 
 
 
@@ -296,7 +295,7 @@ if __name__ == "__main__":
 
     # print(f"{Path(__file__).parent.parent}")
 
-    ingest_docs(index_name=WEAVIATE_SCIFACT_INDEX_NAME)
+    ingest_docs(index_name="Wang_Death_Book_DeepSeek_text_embedding_3_small")
 
     print(1)
 
