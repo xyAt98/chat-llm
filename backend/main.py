@@ -11,7 +11,7 @@ import langsmith
 from regex import P
 from sklearn.calibration import StrOptions
 from vector_store_manage import VectorStoreManager
-from chain import ChatRequest, get_answer_chain
+from chain import ChatRequest, CollectionNotFoundError, get_answer_chain
 # from chain import answer_chain
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,8 +46,7 @@ app.add_middleware(
 # def get_chain_with_index(request: ChatRequest):
 #     """Get chain with specified index name."""
 #     return get_answer_chain(request.index_name or "wang_death_book")
-chain = get_answer_chain("Evaluate_your_first_llm_app_ragas_index_name")
-dynamic_chain.set_chain(chain)
+
 
 add_routes(
     app,
@@ -409,7 +408,12 @@ def root():
 
 @app.get("/check_vector_store/{index_name}")
 def check_vector_store_is_avaliable(index_name: str):
-    return vector_store_manager.check_collections_exist(index_name)
+    try:
+        chain = get_answer_chain(index_name)
+        dynamic_chain.set_chain(chain)
+    except CollectionNotFoundError as e:
+        return {"error": str(e), "code": ResponseCode.BAD_REQUEST} 
+    return {"message": "success", "code": ResponseCode.SUCCESS}
 
 if __name__ == "__main__":
     import uvicorn

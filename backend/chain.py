@@ -106,6 +106,10 @@ Chat History:
 Follow Up Input: {question}
 Standalone Question:"""
 
+class CollectionNotFoundError(Exception):
+    """Raised when a specified collection does not exist in the vector store."""
+    pass
+
 
 client = Client()
 vector_store_manager = VectorStoreManager()
@@ -129,11 +133,15 @@ WEAVIATE_API_KEY = os.environ["WEAVIATE_API_KEY"]
 class ChatRequest(BaseModel):
     question: str
     chat_history: Optional[List[Dict[str, str]]]
-    index_name: Optional[str] = WEAVIATE_DOCS_INDEX_NAME
+    index_name: Optional[str]
 
 
-def get_retriever(index_name: str = WEAVIATE_DOCS_INDEX_NAME) -> BaseRetriever:
-    vector_store = vector_store_manager.get_vector_store_client(index_name)
+def get_retriever(index_name: str) -> BaseRetriever:
+    # 因为要进行检索， 所以这里得保证 index_name 在 cluster 中是存在的
+    if vector_store_manager.check_collections_exist(index_name) is True:
+        vector_store = vector_store_manager.get_vector_store_client(index_name)
+    else:
+        raise CollectionNotFoundError(f"Collection {index_name} does not exist")
     return vector_store.as_retriever(search_kwargs=dict(k=6))
 
 
