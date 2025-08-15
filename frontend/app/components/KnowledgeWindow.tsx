@@ -1,15 +1,29 @@
 
 "use client";
 
-import { Heading, Flex, IconButton, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Button, Input, VStack, HStack, Text, useToast } from "@chakra-ui/react";
+import { Heading, Flex, IconButton, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Button, Input, VStack, HStack, Text, useToast, Checkbox, Box } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
 import { useState, useEffect } from "react";
 
-export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?: boolean}){
+export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?: boolean; sources?: string[]}){
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [url, setUrl] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [titles, setTitles] = useState<{id: string; title: string; checked: boolean}[]>([]);
     const toast = useToast();
+
+    // 初始化 titles 从 sources prop
+    useEffect(() => {
+        if (props.sources && props.sources.length > 0) {
+            debugger
+            const initialTitles = props.sources.map((source, index) => ({
+                id: `source-${index}`,
+                title: source,
+                checked: true
+            }));
+            setTitles(initialTitles);
+        }
+    }, [props.sources]);
 
     const handleAddKnowledge = () => {
         setUrl("");
@@ -45,6 +59,24 @@ export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?:
 
             const data = await response.json();
             if (data.code === 200) {
+                // 判断当前页面URL是否包含vector_index参数
+                const currentPageUrl = new URL(window.location.href);
+                const hasVectorIndex = currentPageUrl.searchParams.has('vector_index');
+                
+                if (!hasVectorIndex && data.index_name) {
+                    // 如果没有vector_index参数，添加该参数并跳转
+                    currentPageUrl.searchParams.set('vector_index', data.index_name);
+                    const new_url = currentPageUrl.toString();
+                    window.location.href = new_url;
+                    return; // 跳转后不执行后续逻辑
+                }
+                
+                const newTitle = {
+                    id: Date.now().toString(),
+                    title: data.title || url,
+                    checked: true
+                };
+                setTitles(prev => [...prev, newTitle]);
                 toast({
                     title: "添加成功",
                     description: `已成功添加知识: ${data.title}`,
@@ -90,6 +122,37 @@ export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?:
                         />
                     </Flex>
                 </div>
+                
+                {/* TitleGroup Component */}
+                <VStack spacing={2} align="stretch" width="100%" maxH="60vh" overflowY="auto">
+                    {titles.map((item) => (
+                        <HStack key={item.id} p={2} borderRadius="md" _hover={{ bg: "gray.700" }}>
+                            <Checkbox 
+                                isChecked={item.checked}
+                                onChange={(e) => {
+                                    setTitles(prev => prev.map(t => 
+                                        t.id === item.id ? { ...t, checked: e.target.checked } : t
+                                    ));
+                                }}
+                                colorScheme="blue"
+                            />
+                            <Text 
+                                color="white" 
+                                fontSize="sm" 
+                                flex={1}
+                                noOfLines={1}
+                                title={item.title}
+                            >
+                                {item.title}
+                            </Text>
+                        </HStack>
+                    ))}
+                    {titles.length === 0 && (
+                        <Text color="gray.500" fontSize="sm" textAlign="center" py={4}>
+                            暂无知识来源，点击 + 添加
+                        </Text>
+                    )}
+                </VStack>
             </div>
 
             <Modal isOpen={isOpen} onClose={onClose}>

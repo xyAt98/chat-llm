@@ -401,19 +401,31 @@ def extract_title_from_docs(docs) -> str:
     
     return "Untitled"
 
+def get_sources_by_index_name(index_name):
+    client = vector_store_manager.get_client()
+    if client:
+        res = client.query.aggregate(index_name)\
+            .with_group_by_filter(["source"])\
+            .with_fields("groupedBy { value } ")\
+            .do()
+        sources = []
+        for group in res["data"]["Aggregate"][index_name]:
+            sources.append(group["groupedBy"]["value"])
+        return sources
 
 @app.get("/")
 def root():
     return {"message": "Hello World"}
 
 @app.get("/check_vector_store/{index_name}")
-def check_vector_store_is_avaliable(index_name: str):
+def check_vector_store_and_get_sources(index_name: str):
     try:
         chain = get_answer_chain(index_name)
         dynamic_chain.set_chain(chain)
+        sources = get_sources_by_index_name(index_name)
     except CollectionNotFoundError as e:
         return {"error": str(e), "code": ResponseCode.BAD_REQUEST} 
-    return {"message": "success", "code": ResponseCode.SUCCESS}
+    return {"message": "success", "code": ResponseCode.SUCCESS, "data": {"sources": sources}}
 
 if __name__ == "__main__":
     import uvicorn

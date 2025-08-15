@@ -13,6 +13,7 @@ import { apiBaseUrl } from "./utils/constants";
 export default function Home() {
   const pathname = usePathname();
   const [shouldOpenModal, setShouldOpenModal] = useState(false);
+  const [sources, setSources] = useState<string[]>([]);
 
   const removeVectorIndexAndRedirect = () => {
     if (typeof window !== 'undefined') {
@@ -58,6 +59,11 @@ export default function Home() {
           removeVectorIndexAndRedirect();
         }
 
+        // 设置 sources 数据
+        if (result && result.data && result.data.sources && Array.isArray(result.data.sources)) {
+          setSources(result.data.sources);
+        }
+
         return true;
       } catch (error) {
         toast.error("检查向量数据库时发生错误");
@@ -80,7 +86,7 @@ export default function Home() {
       <ToastContainer />
       <div className="flex flex-row items-center w-full h-full">
         <div className="w-1/5 h-full rounded-lg m-5" style={{ background: "rgb(36, 36, 37)"}}>
-          <KnowledgeWindow conversationId={uuidv4()} shouldOpenModal={shouldOpenModal}></KnowledgeWindow>
+          <KnowledgeWindow conversationId={uuidv4()} shouldOpenModal={shouldOpenModal} sources={sources}></KnowledgeWindow>
         </div>
         <div className="w-4/5 h-full rounded-lg m-5" style={{ background: "rgb(36, 36, 37)"}}>
           <ChatWindow conversationId={uuidv4()} disabled={shouldOpenModal}></ChatWindow>
