@@ -5,7 +5,7 @@ import { Heading, Flex, IconButton, useDisclosure, Modal, ModalOverlay, ModalCon
 import { AddIcon } from "@chakra-ui/icons";
 import { useState, useEffect } from "react";
 
-export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?: boolean; sources?: string[]}){
+export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?: boolean; sources?: string[]; vectorIndex?: string | null}){
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [url, setUrl] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -49,12 +49,19 @@ export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?:
 
         setIsLoading(true);
         try {
+            const requestBody: {url: string; index_name?: string} = {'url': url};
+            
+            // 如果有 vectorIndex 参数，添加到请求体中
+            if (props.vectorIndex) {
+                requestBody.index_name = props.vectorIndex;
+            }
+            debugger
             const response = await fetch("http://localhost:8080/knowledge/url", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({'url': url}),
+                body: JSON.stringify(requestBody),
             });
 
             const data = await response.json();

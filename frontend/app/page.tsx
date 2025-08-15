@@ -14,6 +14,7 @@ export default function Home() {
   const pathname = usePathname();
   const [shouldOpenModal, setShouldOpenModal] = useState(false);
   const [sources, setSources] = useState<string[]>([]);
+  const [vectorIndex, setVectorIndex] = useState<string | null>(null);
 
   const removeVectorIndexAndRedirect = () => {
     if (typeof window !== 'undefined') {
@@ -33,14 +34,17 @@ export default function Home() {
   const hasValidPathParameter = async () => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      const vectorIndex = urlParams.get('vector_index');
+      const vectorIndexParam = urlParams.get('vector_index');
       
-      if (!vectorIndex || vectorIndex.length === 0) {
+      if (!vectorIndexParam || vectorIndexParam.length === 0) {
         return false;
       }
+      
+      // 设置 vectorIndex 状态
+      setVectorIndex(vectorIndexParam);
 
       try {
-        const response = await fetch(`${apiBaseUrl}/check_vector_store/${vectorIndex}`, {
+        const response = await fetch(`${apiBaseUrl}/check_vector_store/${vectorIndexParam}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -86,7 +90,7 @@ export default function Home() {
       <ToastContainer />
       <div className="flex flex-row items-center w-full h-full">
         <div className="w-1/5 h-full rounded-lg m-5" style={{ background: "rgb(36, 36, 37)"}}>
-          <KnowledgeWindow conversationId={uuidv4()} shouldOpenModal={shouldOpenModal} sources={sources}></KnowledgeWindow>
+          <KnowledgeWindow conversationId={uuidv4()} shouldOpenModal={shouldOpenModal} sources={sources} vectorIndex={vectorIndex}></KnowledgeWindow>
         </div>
         <div className="w-4/5 h-full rounded-lg m-5" style={{ background: "rgb(36, 36, 37)"}}>
           <ChatWindow conversationId={uuidv4()} disabled={shouldOpenModal}></ChatWindow>

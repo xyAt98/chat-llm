@@ -142,6 +142,7 @@ async def get_knowledge_from_book(body: str):
 
 class FetchUrlBody(BaseModel):
     url: str
+    index_name: Optional[str]
 
 
 @app.post("/knowledge/url")
@@ -164,7 +165,10 @@ async def get_knowledge_from_url(body: FetchUrlBody):
         title = extract_title_from_docs(docs)
 
         # 4. 根据title生成index name
-        index_name = generate_index_name(url, title)
+        if body.index_name:
+            index_name = body.index_name
+        else:
+            index_name = generate_index_name(url, title)
         
         # 5. 嵌入内容并存入数据库
         embed_and_store_content(docs, index_name)
@@ -278,7 +282,7 @@ def embed_and_store_content(docs, index_name: str):
         record_manager,
         vectorstore,
         batch_size=64,
-        cleanup="full",
+        cleanup="scoped_full",
         source_id_key="source",
     )
     # TODO: 这里考虑将 index 记录写入 log

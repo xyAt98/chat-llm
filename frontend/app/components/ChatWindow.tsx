@@ -118,6 +118,7 @@ export function ChatWindow(props: { conversationId: string; disabled?: boolean }
         {
           question: messageValue,
           chat_history: chatHistory,
+          index_name: "",
         },
         {
           configurable: {
