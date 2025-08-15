@@ -53,7 +53,7 @@ export default function Home() {
 
         const result = await response.json();
         
-        if (result === false) {
+        if ((result && result.code !== 200) || !result) {
           toast.error("向量数据库不存在或无效");
           removeVectorIndexAndRedirect();
         }
