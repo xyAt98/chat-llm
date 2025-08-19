@@ -1,13 +1,14 @@
 
 "use client";
 
-import { Heading, Flex, IconButton, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Button, Input, VStack, HStack, Text, useToast, Checkbox, Box } from "@chakra-ui/react";
+import { Heading, Flex, IconButton, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Button, Input, VStack, HStack, Text, useToast, Checkbox, Box, Tabs, TabList, TabPanels, Tab, TabPanel } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
 import { useState, useEffect } from "react";
 
 export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?: boolean; sources?: string[]; vectorIndex?: string | null}){
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [url, setUrl] = useState("");
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [titles, setTitles] = useState<{id: string; title: string; checked: boolean}[]>([]);
     const toast = useToast();
@@ -27,15 +28,86 @@ export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?:
 
     const handleAddKnowledge = () => {
         setUrl("");
+        setSelectedFile(null);
         onOpen();
     };
 
     useEffect(() => {
         if (props.shouldOpenModal) {
             setUrl("");
+            setSelectedFile(null);
             onOpen();
         }
     }, [props.shouldOpenModal]);
+
+    const handleFileUpload = async () => {
+        if (!selectedFile) {
+            toast({
+                title: "请选择文件",
+                status: "warning",
+                duration: 2000,
+            });
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            if (props.vectorIndex) {
+                formData.append('index_name', props.vectorIndex);
+            }
+
+            const response = await fetch("http://localhost:8080/knowledge/file", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (data.code === 200) {
+                const currentPageUrl = new URL(window.location.href);
+                const hasVectorIndex = currentPageUrl.searchParams.has('vector_index');
+                
+                if (!hasVectorIndex && data.index_name) {
+                    currentPageUrl.searchParams.set('vector_index', data.index_name);
+                    const new_url = currentPageUrl.toString();
+                    window.location.href = new_url;
+                    return;
+                }
+                
+                const newTitle = {
+                    id: Date.now().toString(),
+                    title: data.title || selectedFile.name,
+                    checked: true
+                };
+                setTitles(prev => [...prev, newTitle]);
+                toast({
+                    title: "上传成功",
+                    description: `已成功上传书籍: ${data.title}`,
+                    status: "success",
+                    duration: 2000,
+                });
+                onClose();
+            } else {
+                toast({
+                    title: "上传失败",
+                    description: data.error || "未知错误",
+                    status: "error",
+                    duration: 2000,
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "网络错误",
+                description: "无法连接到服务器",
+                status: "error",
+                duration: 2000,
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!url.trim()) {
@@ -162,39 +234,74 @@ export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?:
                 </VStack>
             </div>
 
-            <Modal isOpen={isOpen} onClose={onClose}>
+            <Modal isOpen={isOpen} onClose={onClose} size="md">
                 <ModalOverlay />
                 <ModalContent>
-                    <ModalHeader>添加来源</ModalHeader>
+                    <ModalHeader>添加知识来源</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody pb={6}>
-                        <VStack spacing={4}>
-                            <Text color="gray.600">
-                                请输入要添加的网址URL：
-                            </Text>
-                            <Input
-                                placeholder="https://example.com"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                // onKeyPress={(e) => {
-                                //     if (e.key === "Enter") {
-                                //         handleSubmit();
-                                //     }
-                                // }}
-                            />
-                            <HStack width="100%" justify="flex-end" spacing={3}>
-                                <Button variant="outline" onClick={onClose}>
-                                    取消
-                                </Button>
-                                <Button
-                                    colorScheme="blue"
-                                    onClick={handleSubmit}
-                                    isLoading={isLoading}
-                                >
-                                    确认添加
-                                </Button>
-                            </HStack>
-                        </VStack>
+                        <Tabs variant="soft-rounded" colorScheme="blue">
+                            <TabList mb={4}>
+                                <Tab>上传书籍</Tab>
+                                <Tab>添加网址</Tab>
+                            </TabList>
+                            <TabPanels>
+                                <TabPanel>
+                                    <VStack spacing={4}>
+                                        <Text color="gray.600">
+                                            请选择要上传的书籍文件：
+                                        </Text>
+                                        <Input
+                                            type="file"
+                                            accept=".pdf,.epub,.txt,.doc,.docx"
+                                            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                            p={1}
+                                        />
+                                        <Text fontSize="xs" color="gray.500">
+                                            支持格式：PDF, EPUB, TXT, DOC, DOCX
+                                        </Text>
+                                        <HStack width="100%" justify="flex-end" spacing={3}>
+                                            <Button variant="outline" onClick={onClose}>
+                                                取消
+                                            </Button>
+                                            <Button
+                                                colorScheme="blue"
+                                                onClick={handleFileUpload}
+                                                isLoading={isLoading}
+                                                isDisabled={!selectedFile}
+                                            >
+                                                确认上传
+                                            </Button>
+                                        </HStack>
+                                    </VStack>
+                                </TabPanel>
+                                <TabPanel>
+                                    <VStack spacing={4}>
+                                        <Text color="gray.600">
+                                            请输入要添加的网址URL：
+                                        </Text>
+                                        <Input
+                                            placeholder="https://example.com"
+                                            value={url}
+                                            onChange={(e) => setUrl(e.target.value)}
+                                        />
+                                        <HStack width="100%" justify="flex-end" spacing={3}>
+                                            <Button variant="outline" onClick={onClose}>
+                                                取消
+                                            </Button>
+                                            <Button
+                                                colorScheme="blue"
+                                                onClick={handleSubmit}
+                                                isLoading={isLoading}
+                                                isDisabled={!url.trim()}
+                                            >
+                                                确认添加
+                                            </Button>
+                                        </HStack>
+                                    </VStack>
+                                </TabPanel>
+                            </TabPanels>
+                        </Tabs>
                     </ModalBody>
                 </ModalContent>
             </Modal>
