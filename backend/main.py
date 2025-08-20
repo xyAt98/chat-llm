@@ -13,7 +13,7 @@ from sklearn.calibration import StrOptions
 from vector_store_manage import VectorStoreManager
 from chain import ChatRequest, CollectionNotFoundError, get_answer_chain
 # from chain import answer_chain
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from constants import WEAVIATE_DOCS_INDEX_NAME
 from langserve import add_routes
@@ -135,9 +135,50 @@ async def get_trace(body: GetTraceBody):
 
 
 @app.post("/knowledge/book")
-async def get_knowledge_from_book(body: str):
+async def get_knowledge_from_book(file: UploadFile = File(...), index_name: Optional[str] = Form(None)):
     """处理知识库中数据源(形式为本地文档)的上传"""
-    return None
+    try:
+        # 1. 验证文件类型
+        allowed_extensions = {'.pdf', '.epub', '.txt', '.doc', '.docx'}
+        file_extension = '.' + file.filename.split('.')[-1].lower() if '.' in file.filename else ''
+        
+        if file_extension not in allowed_extensions:
+            return {"error": f"Unsupported file type: {file_extension}. Allowed types: {', '.join(allowed_extensions)}", "code": ResponseCode.BAD_REQUEST}
+        
+        # 2. 读取文件内容
+        content = await file.read()
+        
+        # 3. 根据文件类型加载文档
+        docs = load_file_content(content, file.filename, file_extension)
+        if not docs:
+            return {"error": "Failed to load content from file", "code": ResponseCode.BAD_REQUEST}
+        
+        # 4. 生成标题
+        title = extract_title_from_file(docs, file.filename)
+        
+        # 5. 根据title生成index name
+        if index_name:
+            index_name_to_use = index_name
+        else:
+            index_name_to_use = generate_index_name_from_file(file.filename, title)
+        
+        # 对 index_name 进行首字母大写处理
+        index_name_to_use = _capitalize_first_letter(index_name_to_use)
+ 
+        # 6. 嵌入内容并存入数据库
+        embed_and_store_content(docs, index_name_to_use)
+        
+        # 7. 生成示例问题
+        example_questions = generate_example_questions(docs)
+        
+        # 8. 根据 index name 构建 answer chain
+        chain = get_answer_chain(index_name_to_use)
+        dynamic_chain.set_chain(chain)
+        
+        return {"title": title, "index_name": index_name_to_use, "code": ResponseCode.SUCCESS, "example_questions": example_questions}
+        
+    except Exception as e:
+        return {"error": f"Failed to process file: {str(e)}", "code": ResponseCode.INTERNAL_ERROR}
 
 
 class FetchUrlBody(BaseModel):
@@ -170,6 +211,8 @@ async def get_knowledge_from_url(body: FetchUrlBody):
         else:
             index_name = generate_index_name(url, title)
         
+        index_name = _capitalize_first_letter(index_name)
+
         # 5. 嵌入内容并存入数据库
         embed_and_store_content(docs, index_name)
         
@@ -211,6 +254,101 @@ def load_url_content(url: str):
         return None
 
 
+def load_file_content(content: bytes, filename: str, file_extension: str):
+    """根据文件类型加载文件内容"""
+    try:
+        import tempfile
+        import os
+        
+        # 创建临时文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        try:
+            # 根据文件类型选择不同的加载器
+            if file_extension == '.pdf':
+                from langchain.document_loaders import PyPDFLoader
+                loader = PyPDFLoader(tmp_file_path)
+            elif file_extension == '.txt':
+                from langchain.document_loaders import TextLoader
+                loader = TextLoader(tmp_file_path)
+            elif file_extension in ['.doc', '.docx']:
+                from langchain.document_loaders import Docx2txtLoader
+                loader = Docx2txtLoader(tmp_file_path)
+            elif file_extension == '.epub':
+                from langchain.document_loaders import UnstructuredEPubLoader
+                loader = UnstructuredEPubLoader(tmp_file_path)
+            else:
+                print(f"Unsupported file type: {file_extension}")
+                return None
+            
+            docs = loader.load()
+            
+            # 为每个文档添加文件名到metadata
+            for doc in docs:
+                doc.metadata["source"] = filename
+                doc.metadata["file_type"] = file_extension
+            
+            return docs
+            
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
+                
+    except Exception as e:
+        print(f"Error loading file content: {e}")
+        return None
+
+
+def extract_title_from_file(docs, filename: str) -> str:
+    """从文件内容中提取标题"""
+    if not docs or len(docs) == 0:
+        return filename
+    
+    # 尝试从文件名生成标题
+    import os
+    base_name = os.path.splitext(filename)[0]
+    
+    # 清理文件名，移除常见的后缀和特殊字符
+    import re
+    clean_name = re.sub(r'[_\-\.]', ' ', base_name)
+    clean_name = re.sub(r'\s+', ' ', clean_name).strip()
+    
+    # 如果文件名太长，截取前30个字符
+    if len(clean_name) > 30:
+        clean_name = clean_name[:30] + "..."
+    
+    return clean_name if clean_name else "Untitled"
+
+
+def generate_index_name_from_file(filename: str, title: str) -> str:
+    """根据文件名和标题生成index name"""
+    import re
+    import os
+    
+    # 使用文件名（不含扩展名）作为基础
+    base_name = os.path.splitext(filename)[0]
+    
+    # 清理文件名，转换为适合作为index name的格式
+    clean_name = base_name.lower()
+    clean_name = re.sub(r'[^a-z0-9\s]', '', clean_name)  # 移除非字母数字字符
+    clean_name = re.sub(r'\s+', '_', clean_name)  # 空格替换为下划线
+    clean_name = clean_name.strip('_')
+    
+    # 生成index name
+    index_name = f"{clean_name}_index_name"
+    
+    # 确保index name符合Weaviate命名规范
+    index_name = re.sub(r'[^a-z0-9_]', '_', index_name)  # 再次确保只包含允许的字符
+    index_name = re.sub(r'_+', '_', index_name)  # 合并多个下划线
+    index_name = index_name.strip('_')  # 移除首尾下划线
+    
+    # 限制长度
+    return index_name[:50]
+
+
 def generate_index_name(url: str, title: str) -> str:
     """根据title生成index name，在title后加index_name并符合命名规范"""
     import re
@@ -246,13 +384,33 @@ def generate_index_name(url: str, title: str) -> str:
     return index_name[:50]  # 限制长度
 
 
+def _capitalize_first_letter(string: str) -> str:
+    """
+    Capitalize only the first letter of the `string`.
+
+    Parameters
+    ----------
+    string : str
+        The string to be capitalized.
+
+    Returns
+    -------
+    str
+        The capitalized string.
+    """
+
+    if len(string) == 1:
+        return string.capitalize()
+    return string[0].capitalize() + string[1:]
+
+
 def embed_and_store_content(docs, index_name: str):
     """将内容嵌入并存入数据库"""
     # 使用现有的embedding模型和数据库连接
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     # from backend.vector_database import get_vectorstore
     import os
-    
+       
     # 分割文档
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=200)
     docs_transformed = text_splitter.split_documents(docs)

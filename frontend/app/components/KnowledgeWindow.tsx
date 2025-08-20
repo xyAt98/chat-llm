@@ -59,7 +59,7 @@ export function KnowledgeWindow(props:{conversationId: string; shouldOpenModal?:
                 formData.append('index_name', props.vectorIndex);
             }
 
-            const response = await fetch("http://localhost:8080/knowledge/file", {
+            const response = await fetch("http://localhost:8080/knowledge/book", {
                 method: "POST",
                 body: formData,
             });
