@@ -86,7 +86,7 @@ class MyRAG:
             "qrels": qrels
         }
 
-    def prepare_ragas_dataset(self, data: Dict[str, Any], sample_size: Optional[int] = None) -> EvaluationDataset:
+    def prepare_ragas_dataset(self, data: Dict[str, Any], sample_size: Optional[int] = None, based_on_all_relevance: bool = True) -> EvaluationDataset:
         """准备 RAGAS 评估数据集"""
         ragas_data = []
         
@@ -106,22 +106,22 @@ class MyRAG:
             response = self.rag_chain.invoke({'question': query["text"], 'contexts': retrieved_contexts})
             
             # 获取 ground truth 文档
-            # ground_truth_contexts = ""
-            # for doc_id, relevance in relevant_docs.items():
-            #     if relevance > 0:  # 只考虑相关的文档
-            #         cur = data["corpus"][doc_id]["text"]
-            #         ground_truth_contexts.join(f"\t{cur}")
 
             ground_truth_contexts = []
             for doc_id, relevance in relevant_docs.items():
                 if relevance > 0 and doc_id in data["corpus"]:
                     ground_truth_contexts.append(data["corpus"][doc_id]["text"])
             
+            if based_on_all_relevance:
+                reference = "\n".join(ground_truth_contexts)
+            else:
+                reference = ground_truth_contexts[0] if ground_truth_contexts else ""
+
             ragas_data.append({
                 "user_input":query["text"],
                 "retrieved_contexts":retrieved_contexts, 
                 "response":response, # 这是问题的答案
-                "reference":ground_truth_contexts[0] if ground_truth_contexts else ""
+                "reference":reference
             })
         
         return EvaluationDataset.from_list(ragas_data)
@@ -156,13 +156,14 @@ if __name__ == "__main__":
     parser.add_argument("--index-name", type=str, default="Scifact", help="Weaviate 索引名")
     parser.add_argument("--data_path", type=str, default="datasets/scifact", help="数据集路径")
     parser.add_argument("--output", type=str, default="generation_evaluation_results.json", help="结果输出文件")
+    parser.add_argument("--based-on-all-relevance", type=bool, default=True, help="评估是否基于所有相关文档")
 
     args = parser.parse_args()
 
     retriever  = get_retriever(index_name=args.index_name)
     rag = MyRAG(retriever)
     dataset = rag.load_scifact_data(data_path=args.data_path)
-    ragas_dataset = rag.prepare_ragas_dataset(dataset, sample_size=args.sample_size)
+    ragas_dataset = rag.prepare_ragas_dataset(dataset, sample_size=args.sample_size, based_on_all_relevance=args.based_on_all_relevance)
     results = rag.evaluate(ragas_dataset)
     
         # 保存结果
