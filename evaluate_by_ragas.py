@@ -3,10 +3,8 @@ import weaviate
 import os
 import argparse
 
-import numpy as np
 from typing import Any, Dict, Optional
 from tqdm import tqdm
-from datasets import Dataset
 from langchain_deepseek import ChatDeepSeek
 from langchain_community.embeddings import ZhipuAIEmbeddings
 from langchain_core.retrievers import BaseRetriever
